@@ -62,6 +62,23 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px
 .summary-card{margin-top:16px}
 .backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .install-hint{display:none;margin:0 0 14px;padding:12px 14px;border:1px solid #cfe6d4;background:rgba(234,247,237,.95);border-radius:14px;color:#264c30;font-weight:700}
+.online-box{margin-bottom:16px;padding:16px;border:1px solid #cfe6d4;background:rgba(247,252,248,.96);border-radius:16px}
+.online-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.online-search-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.online-results{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.product-result{display:grid;grid-template-columns:72px 1fr;gap:10px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px}
+.product-result img{width:72px;height:72px;object-fit:contain;border-radius:10px;background:#f7f7f7}
+.product-result h4{margin:0 0 4px;font-size:14px}
+.product-result .brandline{font-size:12px;color:var(--muted);margin-bottom:5px}
+.product-result .nutri{font-size:12px;line-height:1.45;color:#334}
+.product-result button{margin-top:8px;padding:7px 10px}
+.barcode-row{display:grid;grid-template-columns:1fr auto auto;gap:8px}
+.scanner-panel{display:none;margin-top:12px}
+#reader{width:100%;max-width:520px;margin:auto;border-radius:14px;overflow:hidden;background:#111}
+.source-note{font-size:11px;color:var(--muted);margin-top:10px}
+.loading{padding:12px;text-align:center;color:var(--muted);font-weight:700}
+@media(max-width:720px){.online-results{grid-template-columns:1fr}.barcode-row{grid-template-columns:1fr 1fr}.barcode-row input{grid-column:span 2}}
+
 @media(max-width:980px){.app{width:calc(100% - 14px);margin:7px auto;border-radius:18px}.topbar{align-items:flex-start;flex-direction:column}.kpis{grid-template-columns:repeat(2,1fr)}.meals-grid,.settings-grid{grid-template-columns:1fr}.meal:nth-child(5){grid-column:auto}.dashboard-head{align-items:stretch;flex-direction:column}.date-note{grid-template-columns:1fr}}
 @media(max-width:620px){.content{padding:14px}.field-grid,.field-grid-4,.kpis,.backup-grid{grid-template-columns:1fr}.add-row{grid-template-columns:1fr 1fr}.add-row button{grid-column:span 2}.brand h1{font-size:21px}}
 </style>
@@ -112,6 +129,40 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px
 
 <div class="card">
 <div class="toolbar"><div><h2 style="margin-bottom:4px">Banca dati alimenti</h2><div class="note">Valori per 100 g o 100 ml.</div></div><span class="badge" id="foodCount">0 alimenti</span></div>
+<div class="online-box">
+  <h3 style="margin:0 0 4px">Trova un alimento online</h3>
+  <div class="note">Ricerca prodotti commerciali su Open Food Facts e importa automaticamente i valori nutrizionali.</div>
+
+  <div class="online-tabs">
+    <button class="secondary" type="button" onclick="showOnlineMode('name')">🔎 Cerca per nome</button>
+    <button class="secondary" type="button" onclick="showOnlineMode('barcode')">📷 Codice a barre</button>
+  </div>
+
+  <div id="onlineNameBox">
+    <div class="online-search-row">
+      <input id="onlineFoodQuery" placeholder="es. Kinder Brioss, Pan di Stelle..." onkeydown="if(event.key==='Enter') searchFoodOnline()">
+      <button class="primary" type="button" onclick="searchFoodOnline()">Cerca online</button>
+    </div>
+  </div>
+
+  <div id="onlineBarcodeBox" style="display:none">
+    <div class="barcode-row">
+      <input id="barcodeInput" inputmode="numeric" placeholder="Codice a barre">
+      <button class="primary" type="button" onclick="lookupBarcode()">Cerca</button>
+      <button class="secondary" type="button" onclick="toggleScanner()">📷 Scansiona</button>
+    </div>
+    <div id="scannerPanel" class="scanner-panel">
+      <div id="reader"></div>
+      <div class="actions" style="justify-content:center;margin-top:8px"><button class="ghost" type="button" onclick="stopScanner()">Chiudi fotocamera</button></div>
+    </div>
+  </div>
+
+  <div id="onlineResults" class="online-results"></div>
+  <div class="source-note">Dati prodotto: Open Food Facts. Verifica l'etichetta della confezione prima di salvare i valori.</div>
+</div>
+<hr>
+<h3>Inserimento manuale</h3>
+
 <div class="field-grid-4">
 <div style="grid-column:span 2"><label>Alimento</label><input id="foodName"></div>
 <div><label>kcal</label><input id="foodKcal" type="number" step="0.1"></div>
@@ -129,6 +180,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px
 </section>
 </main>
 </div>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const MEALS=[["breakfast","🌅","Colazione"],["morning","🍏","Merenda mattina"],["lunch","☀️","Pranzo"],["afternoon","⚡","Spuntino pomeridiano"],["dinner","🌙","Cena"]];
 const DEFAULT_FOODS=[["Alpro Protein - Latte di soia", 57, 5, 2.5, 2.8, 0.9, "Frigo e latticini"], ["Mulino Bianco - Molinetti", 466, 7.5, 63.3, 19, 6, "Biscotti e forno"], ["Miele Millefiori", 304, 0.3, 82.4, 0, 0.2, "Condimenti"], ["Scyavuru - Marmellata di Arance", 245, 0.5, 60, 0.2, 1.5, "Condimenti"], ["Burro", 717, 0.9, 0.1, 81.1, 0, "Condimenti"], ["Pan di Stelle - Biscotti", 480, 7, 66, 20, 3, "Biscotti e forno"], ["Banana", 89, 1.1, 22.8, 0.3, 2.6, "Frutta"], ["Galbusera - Cracker Belle Buone", 430, 9, 68, 13, 6, "Pane pasta cereali"], ["Müller - Yogurt Zero% Vaniglia Naturale", 55, 4.5, 7, 0.2, 0, "Frigo e latticini"], ["Latte Macchiato", 45, 3.2, 4.8, 1.5, 0, "Frigo e latticini"], ["Whey Isolate - Proteine", 370, 85, 5, 2, 0, "Integratori"], ["Massigen Structura - Polvere", 360, 20, 65, 2, 0, "Integratori"], ["Sterilgarda - Latte Parzialmente Scremato", 46, 3.2, 4.9, 1.6, 0, "Frigo e latticini"], ["Lidl - Pane Proteico", 260, 20, 18, 11, 8, "Pane pasta cereali"], ["Uovo Medio", 143, 12.6, 0.7, 9.5, 0, "Uova"], ["Pane di frumento", 265, 9, 49, 3.2, 2.7, "Pane pasta cereali"], ["Marmellata Arancia", 250, 0.4, 62, 0.1, 1.2, "Condimenti"], ["Kellogg's Corn Flakes", 378, 7, 84, 0.9, 3, "Pane pasta cereali"], ["Plumcake Sigma", 420, 6, 52, 21, 1.5, "Biscotti e forno"], ["Cornetto cereali e miele", 380, 7, 50, 17, 3, "Biscotti e forno"], ["Lidl - Skyr ai mirtilli", 65, 9.5, 6.5, 0.3, 0, "Frigo e latticini"], ["Olio d'oliva", 884, 0, 0, 100, 0, "Condimenti"], ["Piselli surgelati", 81, 5.4, 14.5, 0.4, 5.1, "Legumi"], ["Frutto generico", 60, 0.5, 15, 0.2, 2.5, "Frutta"], ["Zucchina", 17, 1.2, 3.1, 0.3, 1, "Verdure"], ["Melanzana naturale", 25, 1, 5.9, 0.2, 3, "Verdure"], ["Granarolo - Scamorza Bianca", 330, 25, 1.5, 25, 0, "Frigo e latticini"], ["Parmigiano grattugiato", 402, 32, 0, 29.7, 0, "Frigo e latticini"], ["Rummo - Pasta", 353, 14.5, 69.5, 1.5, 3, "Pane pasta cereali"], ["Sugo di pomodoro", 45, 1.5, 7, 1.5, 1.5, "Condimenti"], ["Rio Mare - Tonno sgocciolato", 192, 26, 0, 9.5, 0, "Pesce"], ["Bresaola", 151, 32, 0, 2.6, 0, "Carne e affettati"], ["Massigen Pronto Recupero Plus", 360, 10, 76, 1, 0, "Integratori"], ["Consilia - Semi di Zucca", 560, 30, 10, 46, 6, "Frutta secca e semi"], ["Pilos Lidl - Cereal Yogurt Bifidus", 105, 4.2, 15, 3.5, 0.5, "Frigo e latticini"], ["Fin Carré Lidl - Cioccolato fondente 90%", 600, 10, 14, 54, 11, "Snack"], ["Lidl - Skyr Lampone", 63, 9.5, 6, 0.3, 0, "Frigo e latticini"], ["Pomodori datterino", 22, 1.1, 4, 0.2, 1.2, "Verdure"], ["Prosciutto cotto", 145, 20, 1.5, 6.5, 0, "Carne e affettati"], ["Rucola", 25, 2.6, 3.7, 0.7, 1.6, "Verdure"], ["Salsiccia di maiale", 300, 16, 1, 26, 0, "Carne e affettati"], ["Insalata mista condita", 75, 1.5, 6, 5, 2.5, "Verdure"], ["Ricotta di pecora", 174, 11.3, 3, 13, 0, "Frigo e latticini"], ["Parmigiano-Reggiano", 402, 32, 0, 29.7, 0, "Frigo e latticini"], ["Lattuga fresca", 15, 1.4, 2.9, 0.2, 1.3, "Verdure"], ["Santa Lucia Galbani - Mozzarella", 250, 18, 1, 19, 0, "Frigo e latticini"], ["Coca-Cola Zero", 0.2, 0, 0, 0, 0, "Bevande"], ["Carne di vitello magro", 170, 31, 0, 5, 0, "Carne e affettati"], ["Petto di pollo", 110, 23, 0, 1.2, 0, "Carne e affettati"], ["Funghi freschi", 22, 3.1, 3.3, 0.3, 1, "Verdure"], ["Costata di maiale", 242, 27, 0, 15, 0, "Carne e affettati"], ["Verdura cotta", 35, 2, 6, 0.5, 3, "Verdure"], ["Findus - Bastoncini", 210, 12, 22, 8.5, 1.5, "Pesce"], ["Fesa di tacchino a fette", 105, 22, 1, 1.5, 0, "Carne e affettati"], ["Salmone fresco", 208, 20, 0, 13, 0, "Pesce"], ["Cavolfiore bollito", 23, 1.8, 4.1, 0.5, 2.3, "Verdure"], ["Lenticchie cotte", 116, 9, 20, 0.4, 7.9, "Legumi"], ["Patate al forno", 149, 2.5, 25, 4.5, 2.2, "Verdure"], ["Mandorle sgusciate", 579, 21.2, 21.6, 49.9, 12.5, "Frutta secca e semi"], ["Farro soffiato bio", 360, 12, 73, 2.5, 7, "Pane pasta cereali"], ["Semi di chia", 486, 16.5, 42.1, 30.7, 34.4, "Frutta secca e semi"], ["Creatina monoidrato", 0, 0, 0, 0, 0, "Integratori"], ["Ethic Sport - Omega 3 TGX", 900, 0, 0, 100, 0, "Integratori"], ["Mela Golden", 57, 0.3, 13.8, 0.2, 2.4, "Frutta"], ["Arachidi", 567, 25.8, 16.1, 49.2, 8.5, "Frutta secca e semi"], ["Ferrero - Merendina", 430, 6, 55, 21, 2, "Snack"]];
@@ -148,6 +200,128 @@ function persist(key,value){localStorage.setItem(key,JSON.stringify(value));mark
 dayDate.value=todayLocal();
 if(!foods.length){DEFAULT_FOODS.forEach(x=>foods.push({id:uid(),name:x[0],kcal:x[1],p:x[2],c:x[3],f:x[4],fiber:x[5],cat:x[6]}));persist("nutritionFoods",foods)}
 
+
+function showOnlineMode(mode){
+ document.getElementById("onlineNameBox").style.display=mode==="name"?"block":"none";
+ document.getElementById("onlineBarcodeBox").style.display=mode==="barcode"?"block":"none";
+ if(mode!=="barcode") stopScanner();
+}
+function nutrientNumber(nu,keys){
+ for(const k of keys){
+  const v=nu&&nu[k];
+  if(v!==undefined&&v!==null&&v!==""&&!Number.isNaN(Number(v))) return Number(v);
+ }
+ return 0;
+}
+function normalizeOffProduct(p){
+ const nu=p.nutriments||{};
+ let kcal=nutrientNumber(nu,["energy-kcal_100g","energy-kcal"]);
+ if(!kcal){
+  const kj=nutrientNumber(nu,["energy-kj_100g","energy-kj","energy_100g"]);
+  if(kj) kcal=kj/4.184;
+ }
+ return {
+  code:p.code||"",
+  name:p.product_name_it||p.product_name||p.generic_name_it||p.generic_name||"Prodotto senza nome",
+  brand:p.brands||"",
+  image:p.image_front_small_url||p.image_front_url||"",
+  quantity:p.quantity||"",
+  kcal:kcal,
+  p:nutrientNumber(nu,["proteins_100g","proteins"]),
+  c:nutrientNumber(nu,["carbohydrates_100g","carbohydrates"]),
+  f:nutrientNumber(nu,["fat_100g","fat"]),
+  fiber:nutrientNumber(nu,["fiber_100g","fiber"])
+ };
+}
+function onlineProductCard(x,i){
+ const image=x.image?`<img src="${esc(x.image)}" alt="">`:`<div style="width:72px;height:72px;border-radius:10px;background:#f1f4f2;display:grid;place-items:center;font-size:28px">🥫</div>`;
+ return `<div class="product-result">${image}<div><h4>${esc(x.name)}</h4>
+ <div class="brandline">${esc(x.brand)}${x.quantity?" · "+esc(x.quantity):""}${x.code?" · "+esc(x.code):""}</div>
+ <div class="nutri"><strong>${fmt(x.kcal)} kcal</strong> · P ${fmt(x.p,1)} g · C ${fmt(x.c,1)} g · F ${fmt(x.f,1)} g${x.fiber?" · Fibre "+fmt(x.fiber,1)+" g":""}</div>
+ <button class="secondary" type="button" onclick="importOnlineResult(${i})">Usa questi valori</button></div></div>`;
+}
+let onlineProducts=[];
+async function searchFoodOnline(){
+ const q=document.getElementById("onlineFoodQuery").value.trim();
+ const box=document.getElementById("onlineResults");
+ if(q.length<2){alert("Inserisci almeno 2 caratteri.");return}
+ box.innerHTML='<div class="loading">Ricerca in corso…</div>';
+ try{
+  const url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)
+   +"&search_simple=1&action=process&json=1&page_size=12&fields=code,product_name,product_name_it,generic_name,generic_name_it,brands,quantity,image_front_small_url,image_front_url,nutriments";
+  const r=await fetch(url,{headers:{"Accept":"application/json"}});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const data=await r.json();
+  onlineProducts=(data.products||[]).map(normalizeOffProduct).filter(x=>x.name&&(x.kcal||x.p||x.c||x.f));
+  box.innerHTML=onlineProducts.length?onlineProducts.map((x,i)=>onlineProductCard(x,i)).join(""):'<div class="loading">Nessun prodotto con valori nutrizionali trovato.</div>';
+ }catch(e){
+  console.error(e);
+  box.innerHTML='<div class="loading">Ricerca non disponibile. Controlla la connessione Internet e riprova.</div>';
+ }
+}
+async function lookupBarcode(codeOverride){
+ const code=String(codeOverride||document.getElementById("barcodeInput").value||"").replace(/\D/g,"");
+ const box=document.getElementById("onlineResults");
+ if(code.length<8){alert("Inserisci un codice a barre valido.");return}
+ document.getElementById("barcodeInput").value=code;
+ box.innerHTML='<div class="loading">Ricerca prodotto…</div>';
+ try{
+  const url="https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=code,product_name,product_name_it,generic_name,generic_name_it,brands,quantity,image_front_small_url,image_front_url,nutriments";
+  const r=await fetch(url,{headers:{"Accept":"application/json"}});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const data=await r.json();
+  if(!data.product){onlineProducts=[];box.innerHTML='<div class="loading">Prodotto non trovato in Open Food Facts.</div>';return}
+  onlineProducts=[normalizeOffProduct(data.product)];
+  box.innerHTML=onlineProductCard(onlineProducts[0],0);
+ }catch(e){
+  console.error(e);
+  box.innerHTML='<div class="loading">Ricerca non disponibile. Controlla la connessione Internet e riprova.</div>';
+ }
+}
+function importOnlineResult(i){
+ const x=onlineProducts[i];
+ if(!x)return;
+ foodName.value=(x.brand?x.brand+" - ":"")+x.name;
+ foodKcal.value=Math.round((Number(x.kcal)||0)*10)/10;
+ foodP.value=Math.round((Number(x.p)||0)*10)/10;
+ foodC.value=Math.round((Number(x.c)||0)*10)/10;
+ foodF.value=Math.round((Number(x.f)||0)*10)/10;
+ foodFiber.value=Math.round((Number(x.fiber)||0)*10)/10;
+ foodCat.value="Altro";
+ foodName.scrollIntoView({behavior:"smooth",block:"center"});
+ foodName.focus();
+}
+let qrScanner=null,scannerRunning=false;
+async function toggleScanner(){
+ if(scannerRunning){await stopScanner();return}
+ const panel=document.getElementById("scannerPanel");
+ panel.style.display="block";
+ if(typeof Html5Qrcode==="undefined"){
+  alert("Il modulo fotocamera non è disponibile. Puoi digitare il codice a barre manualmente.");
+  panel.style.display="none"; return;
+ }
+ try{
+  qrScanner=new Html5Qrcode("reader");
+  await qrScanner.start({facingMode:"environment"},{fps:10,qrbox:{width:260,height:140},aspectRatio:1.777778},
+   async decodedText=>{
+    const code=String(decodedText||"").replace(/\D/g,"");
+    if(code.length>=8){
+     barcodeInput.value=code;
+     await stopScanner();
+     lookupBarcode(code);
+    }
+   },()=>{});
+  scannerRunning=true;
+ }catch(e){
+  console.error(e); panel.style.display="none";
+  alert("Non riesco ad aprire la fotocamera. Controlla i permessi oppure inserisci il codice manualmente.");
+ }
+}
+async function stopScanner(){
+ const panel=document.getElementById("scannerPanel");
+ try{if(qrScanner&&scannerRunning)await qrScanner.stop();if(qrScanner)await qrScanner.clear();}catch(e){}
+ qrScanner=null;scannerRunning=false;if(panel)panel.style.display="none";
+}
 function calculateTargets(){const sx=sex.value,ag=n(age.value),w=n(weight.value),h=n(height.value),act=n(activity.value),g=n(goal.value);if(!ag||!w||!h)return;const bmr=10*w+6.25*h-5*ag+(sx==="M"?5:-161);const kcal=Math.round(bmr*act*(1+g/100));const p=Math.round(w*1.8),f=Math.round(w*0.9),c=Math.max(0,Math.round((kcal-p*4-f*9)/4));targetKcal.value=kcal;targetP.value=p;targetC.value=c;targetF.value=f;saveTargets()}
 function saveTargets(){targets={kcal:n(targetKcal.value),p:n(targetP.value),c:n(targetC.value),f:n(targetF.value)};persist("nutritionTargets",targets);renderTotals()}
 function loadTargetInputs(){targetKcal.value=targets.kcal;targetP.value=targets.p;targetC.value=targets.c;targetF.value=targets.f}
